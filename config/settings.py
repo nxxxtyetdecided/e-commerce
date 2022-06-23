@@ -159,4 +159,4 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 APPEND_SLASH = False
 
 # AUTH_USER 기본 설정
-# AUTH_USER_MODEL = 'user.User' # app.table 형태
+AUTH_USER_MODEL = 'user.User' # app.table 형태
