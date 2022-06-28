@@ -8,3 +8,10 @@ class Timestamp(models.Model):
 
     class Meta:
         abstract = True
+
+
+class ActiveTime(Timestamp):
+    is_active = models.BooleanField("활성화 여부", default=True)
+
+    class Meta:
+        abstract = True
