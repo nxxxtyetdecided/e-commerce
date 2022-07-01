@@ -1,7 +1,7 @@
 from django.urls import path
 
-from product.views import CategoryListCreateAPI, CategoryDetailAPI, \
-                        ProductListCreateAPI, ProductDetailAPI
+from product.views.category import CategoryListCreateAPI, CategoryDetailAPI
+from product.views.product import ProductListCreateAPI, ProductDetailAPI
 
 urlpatterns = [
     path("categories", CategoryListCreateAPI.as_view()),

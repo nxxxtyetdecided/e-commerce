@@ -58,3 +58,25 @@ class IsStaffOrReadOnly(BasePermission):
 
     def has_object_permission(self, request, view, obj):
         return obj.seller == request.user
+
+
+class IsBuyer(BasePermission):
+    SAFE_METHODS = ('GET',)
+
+    def has_permission(self, request, view):
+        user = request.user
+
+        if not user.is_authenticated:
+            response = {
+                "detail": "서비스를 이용하려면 로그인 해야합니다."
+            }
+            raise GenericAPIException(status_code=status.HTTP_401_UNAUTHORIZED,
+                                      detail=response)
+
+        # 로그인 & 조회
+        if user.is_authenticated:
+            return True
+        return False
+
+    def has_object_permission(self, request, view, obj):
+        return obj.user == request.user
