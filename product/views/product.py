@@ -1,6 +1,3 @@
-from django.shortcuts import render
-
-from datetime import datetime
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -9,6 +6,7 @@ from rest_framework.generics import get_object_or_404
 from product.models import Category, Product
 from product.serializer import CategorySerializer, ProductSerializer
 from utils.permissions import IsAdminOrReadOnly, IsStaffOrReadOnly
+from datetime import datetime
 
 
 class CategoryListCreateAPI(APIView):
