@@ -2,11 +2,11 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.generics import get_object_or_404
+from django.utils import timezone
 
 from product.models import Category, Product
 from product.serializer import CategorySerializer, ProductSerializer
 from utils.permissions import IsAdminOrReadOnly, IsStaffOrReadOnly
-from datetime import datetime
 
 
 class CategoryListCreateAPI(APIView):
@@ -26,6 +26,8 @@ class CategoryListCreateAPI(APIView):
 
 
 class CategoryDetailAPI(APIView):
+    permission_classes = [IsAdminOrReadOnly]
+
     def _get_object(self, id):
         category = get_object_or_404(Category, id=id)
         return category
@@ -46,7 +48,7 @@ class CategoryDetailAPI(APIView):
     def delete(self, request, id):
         category = self._get_object(id)
         category.is_active = False
-        category.deleted_at = datetime.now()
+        category.deleted_at = timezone.now()
         category.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -88,6 +90,6 @@ class ProductDetailAPI(APIView):
     def delete(self, request, id):
         product = self._get_object(id)
         product.is_active = False
-        product.deleted_at = datetime.now()
+        product.deleted_at = timezone.now()
         product.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
