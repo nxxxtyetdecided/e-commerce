@@ -60,7 +60,11 @@ class IsStaffOrReadOnly(BasePermission):
         return obj.seller == request.user
 
 
+<<<<<<< HEAD
 class IsBuyer(BasePermission):
+=======
+class IsOwner(permissions.BasePermission):
+>>>>>>> c26191a53523a55a676f700082773a543ef514bd
     SAFE_METHODS = ('GET',)
 
     def has_permission(self, request, view):
@@ -74,9 +78,23 @@ class IsBuyer(BasePermission):
                                       detail=response)
 
         # 로그인 & 조회
+<<<<<<< HEAD
         if user.is_authenticated:
             return True
         return False
 
     def has_object_permission(self, request, view, obj):
         return obj.user == request.user
+=======
+        if user.is_authenticated and request.method in self.SAFE_METHODS:
+            return True
+
+    def has_object_permission(self, request, view, obj):
+        # Read permissions are allowed to any request,
+        # so we'll always allow GET, HEAD or OPTIONS requests.
+        if request.method in permissions.SAFE_METHODS:
+            return True
+
+        # Instance must have an attribute named `owner`.
+        return obj.user == request.user
+>>>>>>> c26191a53523a55a676f700082773a543ef514bd
