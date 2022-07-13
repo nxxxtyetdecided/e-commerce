@@ -1,3 +1,4 @@
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 
 # Create your models here.
@@ -42,8 +43,11 @@ class Cart(models.Model):
     quantity = models.PositiveSmallIntegerField("수량")
     buy = models.BooleanField("구매 여부", default=False)
 
-    def price(self):
+    def total_price(self):
         return self.quantity * self.product_option.price
+
+    def __str__(self):
+        return f'{self.product_option.name} : {self.quantity}개'
 
     class Meta:
         db_table = "cart"
@@ -52,7 +56,7 @@ class Cart(models.Model):
 class Order(models.Model):
     customer = models.ForeignKey(User, verbose_name="고객", on_delete=models.CASCADE)
     order_date = models.DateField("구매 일자", auto_now_add=True)
-    transaction_id = models.DateTimeField("주문번호")
+    transaction_id = models.DateTimeField("주문번호", null=True)
 
     class ShippingStatus(models.TextChoices):
         PAY_COMPLETE = "PAY_COMPLETE", _("결제 완료")
@@ -60,11 +64,17 @@ class Order(models.Model):
         SHIPPING = "SHIPPING", _("배송중")
         DELIVER = "DELIVER", _("배송 완료")
 
+    class PayMethod(models.TextChoices):
+        CARD = 'CARD', _('카드')
+        CASH = 'CASH', _('무통장 입금')
+
     status = models.CharField(
         max_length=15,
         choices=ShippingStatus.choices,
         default=ShippingStatus.PAY_COMPLETE
     )
+
+    method = models.CharField(max_length=4, choices=PayMethod.choices, default=PayMethod.CARD)
 
     def __str__(self):
         return self.transaction_id
@@ -81,6 +91,12 @@ class Order(models.Model):
 
 
 class OrderItem(models.Model):
+    order = models.ForeignKey(
+                                Order,
+                                verbose_name="주문",
+                                on_delete=models.SET_NULL,
+                                null=True,
+                            )
     product = models.ForeignKey(
                                 ProductOption,
                                 verbose_name="상품",
@@ -88,6 +104,12 @@ class OrderItem(models.Model):
                                 null=True
                                 )
     quantity = models.PositiveSmallIntegerField("수량")
+    review = models.OneToOneField(
+                                  'Review',
+                                  on_delete=models.SET_NULL,
+                                  null=True,
+                                  default=None
+                                )
 
     @property
     def get_price(self):
@@ -98,3 +120,14 @@ class OrderItem(models.Model):
         db_table = "order_item"
 
 
+class Review(ActiveTime):
+    product = models.ForeignKey(ProductOption, verbose_name="제품", on_delete=models.CASCADE)
+    customer = models.ForeignKey(User, verbose_name="작성자", on_delete=models.SET_NULL, null=True)
+    comment = models.CharField("리뷰", max_length=250)
+    grade = models.PositiveSmallIntegerField(
+                                             "평점",
+                                             validators=[MinValueValidator(1), MaxValueValidator(5)]
+                                             )
+
+    class Meta:
+        db_table = "review"
