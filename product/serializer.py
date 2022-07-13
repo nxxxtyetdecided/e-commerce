@@ -1,11 +1,9 @@
 from django.db import transaction
 from rest_framework import serializers
+from django.utils import timezone
 
-<<<<<<< HEAD
-from product.models import Category, Product, Cart, OrderItem, ProductOption
-=======
-from product.models import Category, Product, ProductOption
->>>>>>> c26191a53523a55a676f700082773a543ef514bd
+from product.models import Category, Product, ProductOption, \
+    Cart, Order, OrderItem, Review
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -17,110 +15,33 @@ class CategorySerializer(serializers.ModelSerializer):
 
 
 class ProductOptionSerializer(serializers.ModelSerializer):
-<<<<<<< HEAD
-    is_active = serializers.BooleanField(default=True)
-
-    class Meta:
-        model = ProductOption
-        fields = ("name", "price",)
-=======
-
     class Meta:
         model = ProductOption
         fields = ('name', 'price',)
->>>>>>> c26191a53523a55a676f700082773a543ef514bd
 
 
 class ProductSerializer(serializers.ModelSerializer):
     is_active = serializers.BooleanField(default=True)
     seller = serializers.SerializerMethodField()
-<<<<<<< HEAD
-    product_option = ProductOptionSerializer(many=True)
-=======
     product_option = ProductOptionSerializer(many=True, required=False)
->>>>>>> c26191a53523a55a676f700082773a543ef514bd
 
     def get_seller(self, obj):  # serializerMethodField
         return obj.seller.username
 
     @transaction.atomic
     def create(self, validated_data):
-<<<<<<< HEAD
-        print(validated_data)
-        product_option = validated_data.pop('product_option')
-=======
         product_options = validated_data.pop("product_option")
->>>>>>> c26191a53523a55a676f700082773a543ef514bd
 
         product = Product(**validated_data)
         product.seller = self.context['request'].user
         product.save()
 
-<<<<<<< HEAD
-        ProductOption.objects.create(product=product, **product_option)
-
-=======
         for product_option in product_options:
             ProductOption.objects.create(product=product, **product_option)
->>>>>>> c26191a53523a55a676f700082773a543ef514bd
         return product
 
     class Meta:
         model = Product
-<<<<<<< HEAD
-        fields = ("seller",
-                  "title",
-                  "thumnail",
-                  "category",
-                  "description",
-                  "product_option",
-                  "is_active")
-
-
-
-
-class CartSerializer(serializers.ModelSerializer):
-    consumer = serializers.SerializerMethodField()
-
-    def get_consumer(self, obj):
-        return obj.user
-
-    def create(self, validated_data):
-        cart = Cart(**validated_data)
-        cart.user = self.context['user']
-        cart.save()
-
-        return cart
-
-    class Meta:
-        model = Cart
-        exclude = ('id',)
-
-
-class OrderItemSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = OrderItem
-        fields = ('product', 'order', 'quantity', 'all_price')
-
-
-class OrderSerializer(serializers.ModelSerializer):
-    consumer = serializers.SerializerMethodField()
-    order_items = OrderItemSerializer(many=True, read_only=True)
-
-    def get_consumer(self, obj):
-        return obj.user
-
-    def create(self, validated_data):
-        cart = Cart(**validated_data)
-        cart.user = self.context['user']
-        cart.save()
-
-        return cart
-
-    class Meta:
-        model = Cart
-        fields = ('transaction_id', 'order_date', 'order_items', 'address', 'total_price',)
-=======
         fields = (
             "seller",
             "title",
@@ -138,6 +59,84 @@ class CartSerializer(serializers.ModelSerializer):
     def get_customer(self, obj):  # serializerMethodField
         return obj.customer.username
 
+    def create(self, validated_data):
+        cart = Cart(**validated_data)
+        cart.customer = self.context['request'].user
+        cart.save()
+        return cart
+
+    class Meta:
+        model = Cart
+        fields = ("customer", "product_option", "quantity", "buy", "total_price")
+
+
+class OrderItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OrderItem
+        fields = ('product', 'quantity', 'get_price')  # price는 model에서 함수로 선언
+
+
 class OrderSerializer(serializers.ModelSerializer):
-    pass
->>>>>>> c26191a53523a55a676f700082773a543ef514bd
+    customer = serializers.SerializerMethodField()
+    order_item = OrderItemSerializer(many=True, required=False)
+    get_order_items = serializers.ListField(required=False)
+
+    def get_customer(self, obj):  # serializerMethodField
+        return obj.customer.username
+
+    @transaction.atomic
+    def create(self, validated_data):
+        get_order_items = validated_data.pop("get_order_items")
+
+        # Order 생성
+        order = Order(**validated_data)
+        order.transaction_id = timezone.now()
+        order.customer = self.context['request'].user
+        order.save()
+
+        carts = Cart.objects.prefetch_related("product_option").all()
+
+        """ 
+            Cart에 있는 품목이면 구매 여부 -> True
+            OrderItem 생성
+        """
+        for cart in carts:
+            for item in get_order_items:
+                if cart.product_option.id == item:
+                    cart.buy = True
+                    cart.save()
+                    OrderItem.objects.create(
+                        order=order,
+                        product=cart.product_option,
+                        quantity=cart.quantity
+                    )
+
+        return order
+
+    class Meta:
+        model = Order
+        fields = (
+            'customer',
+            'method',
+            'status',
+            'order_item',  # 왜 목록에 나타나지 않음...
+            'transaction_id',
+            'get_order_items',
+            'get_total_price'
+        )
+
+
+class ReviewSerializer(serializers.ModelSerializer):
+    customer = serializers.SerializerMethodField()
+
+    def get_customer(self, obj):  # serializerMethodField
+        return obj.customer.username
+
+    def create(self, validated_data):
+        orderitem = OrderItem.objects.select_related("review").filter()
+        customer = self.context['request'].user
+
+
+    class Meta:
+        model = Review
+        fields = "__all__"

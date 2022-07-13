@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.generics import get_object_or_404
 from django.utils import timezone
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from product.models import Category, Product
 from product.serializer import CategorySerializer, ProductSerializer
@@ -12,6 +13,7 @@ from utils.permissions import IsAdminOrReadOnly, IsStaffOrReadOnly
 
 class CategoryListCreateAPI(APIView):
     permission_classes = [IsAdminOrReadOnly]
+    authentication_classes = [JWTAuthentication]
 
     def get(self, request):
         categories = Category.objects.filter(is_active=True)
@@ -28,6 +30,7 @@ class CategoryListCreateAPI(APIView):
 
 class CategoryDetailAPI(APIView):
     permission_classes = [IsAdminOrReadOnly]
+    authentication_classes = [JWTAuthentication]
 
     def _get_object(self, id):
         category = get_object_or_404(Category, id=id)
@@ -68,6 +71,7 @@ class ProductSearchHandler:
 
 class ProductListCreateAPI(APIView, ProductSearchHandler):
     permission_classes = [IsStaffOrReadOnly]
+    authentication_classes = [JWTAuthentication]
 
     def get(self, request):
         q = self.get_query_params(request)
@@ -98,6 +102,7 @@ class ProductDetailAPI(APIView):
             관리자, 판매자만 가능
         """
     permission_classes = [IsStaffOrReadOnly]
+    authentication_classes = [JWTAuthentication]
 
     def _get_object(self, id):
         product = get_object_or_404(Product, id=id)

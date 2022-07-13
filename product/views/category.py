@@ -4,6 +4,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.generics import get_object_or_404
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from product.models import Category
 from product.serializer import CategorySerializer
@@ -12,6 +13,7 @@ from utils.permissions import IsAdminOrReadOnly
 
 class CategoryListCreateAPI(APIView):
     permission_classes = [IsAdminOrReadOnly]
+    authentication_classes = [JWTAuthentication]
 
     def get(self, request):
         categories = Category.objects.filter(is_active=True)
@@ -27,6 +29,9 @@ class CategoryListCreateAPI(APIView):
 
 
 class CategoryDetailAPI(APIView):
+    permission_classes = [IsAdminOrReadOnly]
+    authentication_classes = [JWTAuthentication]
+
     def _get_object(self, id):
         category = get_object_or_404(Category, id=id)
         return category
