@@ -1,7 +1,8 @@
+from django.db.models import Q
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.generics import get_object_or_404
+from rest_framework.generics import get_object_or_404, GenericAPIView
 from django.utils import timezone
 
 from product.models import Category, Product
@@ -53,15 +54,37 @@ class CategoryDetailAPI(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class ProductListCreateAPI(APIView):
+class ProductSearchHandler:
+    def get_query_params(self, request):
+        q = Q(is_active=True)
+
+        data = request.query_params.get
+        title = data('title', None)
+        if title:
+            q &= Q(title__icontains=title)
+
+        return q
+
+
+class ProductListCreateAPI(APIView, ProductSearchHandler):
     permission_classes = [IsStaffOrReadOnly]
 
     def get(self, request):
-        products = Product.objects.filter(is_active=True)
+        q = self.get_query_params(request)
+        products = Product.objects.filter(q)
         serializer = ProductSerializer(products, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def post(self, request):
+        """ JSON
+        {
+            "title": "product1",
+            "description": "product1입니다",
+            "category": 1,
+            "product_option": [{"name": "옵션1","price":1000},
+                                {"name": "옵션2","price":2000}]
+        }
+        """
         serializer = ProductSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
             serializer.save()
@@ -72,6 +95,7 @@ class ProductListCreateAPI(APIView):
 class ProductDetailAPI(APIView):
     def _get_object(self, id):
         product = get_object_or_404(Product, id=id)
+        self.check_object_permissions(self.request, product)
         return product
 
     def get(self, request, id):
@@ -92,4 +116,4 @@ class ProductDetailAPI(APIView):
         product.is_active = False
         product.deleted_at = timezone.now()
         product.save()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response({"DELETE": "SUCESS"}, status=status.HTTP_204_NO_CONTENT)
