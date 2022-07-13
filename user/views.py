@@ -7,6 +7,8 @@ from rest_framework.views import APIView
 
 
 # 회원가입 API
+from rest_framework_simplejwt.tokens import RefreshToken
+
 from user.serializer import UserSerializer
 
 
@@ -31,4 +33,12 @@ class LoginAPI(APIView):
                             status=status.HTTP_401_UNAUTHORIZED)
 
         login(request, user)
-        return Response({"message": "Login Success"}, status=status.HTTP_200_OK)
+
+        refresh = RefreshToken.for_user(user)
+        refresh_token = str(refresh)
+        access_token = str(refresh.access_token)
+        return Response({
+                            "message": 'login success',
+                            'refresh': refresh_token,
+                            'access': access_token
+                        }, status=status.HTTP_200_OK)

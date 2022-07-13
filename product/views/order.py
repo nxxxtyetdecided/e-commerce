@@ -2,6 +2,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.generics import get_object_or_404
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from product.models import Order
 from product.serializer import OrderSerializer
@@ -10,6 +11,7 @@ from utils.permissions import IsCustomer
 
 class OrderListCreateAPI(APIView):
     permission_classes = [IsCustomer]
+    authentication_classes = [JWTAuthentication]
 
     def get(self, request):
         order = Order.objects.filter(customer=request.user)
@@ -26,6 +28,7 @@ class OrderListCreateAPI(APIView):
 
 class OrderDetailAPI(APIView):
     permission_classes = [IsCustomer]
+    authentication_classes = [JWTAuthentication]
 
     def _get_object(self, id):
         order = get_object_or_404(Order, id=id)
