@@ -1,7 +1,9 @@
 from django.db import transaction
 from rest_framework import serializers
+from django.utils import timezone
 
-from product.models import Category, Product, ProductOption
+from product.models import Category, Product, ProductOption, \
+    Cart, Order, OrderItem, Review
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -13,7 +15,6 @@ class CategorySerializer(serializers.ModelSerializer):
 
 
 class ProductOptionSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = ProductOption
         fields = ('name', 'price',)
@@ -58,5 +59,84 @@ class CartSerializer(serializers.ModelSerializer):
     def get_customer(self, obj):  # serializerMethodField
         return obj.customer.username
 
+    def create(self, validated_data):
+        cart = Cart(**validated_data)
+        cart.customer = self.context['request'].user
+        cart.save()
+        return cart
+
+    class Meta:
+        model = Cart
+        fields = ("customer", "product_option", "quantity", "buy", "total_price")
+
+
+class OrderItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OrderItem
+        fields = ('product', 'quantity', 'get_price')  # price는 model에서 함수로 선언
+
+
 class OrderSerializer(serializers.ModelSerializer):
-    pass
+    customer = serializers.SerializerMethodField()
+    order_item = OrderItemSerializer(many=True, required=False)
+    get_order_items = serializers.ListField(required=False)
+
+    def get_customer(self, obj):  # serializerMethodField
+        return obj.customer.username
+
+    @transaction.atomic
+    def create(self, validated_data):
+        get_order_items = validated_data.pop("get_order_items")
+
+        # Order 생성
+        order = Order(**validated_data)
+        order.transaction_id = timezone.now()
+        order.customer = self.context['request'].user
+        order.save()
+
+        carts = Cart.objects.prefetch_related("product_option").all()
+
+        """ 
+            Cart에 있는 품목이면 구매 여부 -> True
+            OrderItem 생성
+        """
+        for cart in carts:
+            for item in get_order_items:
+                if cart.product_option.id == item:
+                    cart.buy = True
+                    cart.save()
+                    OrderItem.objects.create(
+                        order=order,
+                        product=cart.product_option,
+                        quantity=cart.quantity
+                    )
+
+        return order
+
+    class Meta:
+        model = Order
+        fields = (
+            'customer',
+            'method',
+            'status',
+            'order_item',  # 왜 목록에 나타나지 않음...
+            'transaction_id',
+            'get_order_items',
+            'get_total_price'
+        )
+
+
+class ReviewSerializer(serializers.ModelSerializer):
+    customer = serializers.SerializerMethodField()
+
+    def get_customer(self, obj):  # serializerMethodField
+        return obj.customer.username
+
+    def create(self, validated_data):
+        orderitem = OrderItem.objects.select_related("review").filter()
+        customer = self.context['request'].user
+
+
+    class Meta:
+        model = Review
+        fields = "__all__"

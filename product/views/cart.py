@@ -1,4 +1,3 @@
-from rest_framework import permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
@@ -6,19 +5,19 @@ from rest_framework.generics import get_object_or_404
 
 from product.models import Cart
 from product.serializer import CartSerializer
-from utils.permissions import IsOwner
+from utils.permissions import IsCustomer
 
 
 class CartListCreateAPI(APIView):
-    permission_classes = [IsOwner]
+    permission_classes = [IsCustomer]
 
     def get(self, request):
-        cart = Cart.objects.filter(buy=False)
+        cart = Cart.objects.filter(buy=False, customer=request.user)
         serializer = CartSerializer(cart, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def post(self, request):
-        serializer = CartSerializer(data=request.data)
+        serializer = CartSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -26,16 +25,17 @@ class CartListCreateAPI(APIView):
 
 
 class CartDetailAPI(APIView):
-    permission_classes = [IsOwner]
+    permission_classes = [IsCustomer]
 
     def _get_object(self, id):
         cart = get_object_or_404(Cart, id=id)
+        self.check_object_permissions(self.request, cart) # Check object level
         return cart
 
     def get(self, request, id):
         cart = self._get_object(id)
         serializer = CartSerializer(cart)
-        return Response(serializer.data)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     def put(self, request, id):
         cart = self._get_object(id)
@@ -49,16 +49,3 @@ class CartDetailAPI(APIView):
         cart = self._get_object(id)
         cart.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-class OrderListCreateAPI(APIView):
-    def get(self):
-        pass
-
-    def post(self):
-        pass
-
-
-class OrderDetailAPI(APIView):
-    def get(self):
-        pass
